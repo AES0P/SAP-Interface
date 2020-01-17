@@ -1,0 +1,100 @@
+*&---------------------------------------------------------------------*
+*& Report  ZJCO_TEST
+*&
+*&---------------------------------------------------------------------*
+*& JCO SERVER TEST
+*
+*   执行此程序之前，请自行在SM59中，定义Unicode方式的TCP/IP连接，名字任取，例如JCO_SERVER。
+*   其中Programm ID填写Java端server的名字
+*
+*&---------------------------------------------------------------------*
+
+REPORT  ZJCO_TEST.
+
+DATA: RESPTEXT LIKE SY-LISEL,
+      ECHOTEXT LIKE SY-LISEL.
+
+DATA: RFC_MESS(128).
+
+
+*--------------------------------由于STFC_CONNECTION已存在于SAP本地中，所以无需在Java服务端创建其具体实现
+CALL FUNCTION 'STFC_CONNECTION'
+  DESTINATION 'JCO_SERVER'"SM59中配置的RFC目标系统
+  EXPORTING
+    REQUTEXT              = '这条消息是 SAP 端调用 STFC_CONNECTION 发送的'"需发送的文本
+  IMPORTING
+    RESPTEXT              = RESPTEXT"服务器响应文本
+    ECHOTEXT              = ECHOTEXT"回显文本
+  EXCEPTIONS
+    SYSTEM_FAILURE        = 1  MESSAGE RFC_MESS
+    COMMUNICATION_FAILURE = 2  MESSAGE RFC_MESS.
+
+IF SY-SUBRC NE 0.
+  WRITE: / 'Call function error SY-SUBRC = ', SY-SUBRC.
+  WRITE: / RFC_MESS.
+ELSE.
+  WRITE:/ RESPTEXT,ECHOTEXT ,/.
+ENDIF.
+
+
+*--------------------------------ZSTFC_CONNECTION在ABAP本地不存在，需要在Java服务端实现此函数，对应java端的 ZSTFC_CONNECTIONRepository实现
+CALL FUNCTION 'ZSTFC_CONNECTION'
+  DESTINATION 'JCO_SERVER'"SM59中配置的RFC目标系统
+  EXPORTING
+    REQUTEXT              = '这条消息是 SAP 端调用 ZSTFC_CONNECTION 发送的'"需发送的文本
+  IMPORTING
+    RESPTEXT              = RESPTEXT"服务器响应文本
+    ECHOTEXT              = ECHOTEXT"回显文本
+  EXCEPTIONS
+    SYSTEM_FAILURE        = 1  MESSAGE RFC_MESS
+    COMMUNICATION_FAILURE = 2  MESSAGE RFC_MESS.
+
+IF SY-SUBRC NE 0.
+  WRITE: / 'Call function error SY-SUBRC = ', SY-SUBRC.
+  WRITE: / RFC_MESS.
+ELSE.
+  WRITE:/ RESPTEXT,ECHOTEXT,/.
+ENDIF.
+
+
+
+*--------------------------------下面ABAP程序是用来配合测试Java端的MyTIDHandler（）的
+CALL FUNCTION 'STFC_CONNECTION' IN BACKGROUND TASK
+  DESTINATION 'JCO_SERVER'
+  EXPORTING
+    REQUTEXT              = '这条消息是 SAP 端通过 IN BACKGROUND TASK 方式调用 STFC_CONNECTION  发送的'
+  EXCEPTIONS
+    SYSTEM_FAILURE        = 1  MESSAGE RFC_MESS
+    COMMUNICATION_FAILURE = 2  MESSAGE RFC_MESS.
+DATA: TID TYPE ARFCTID.
+CALL FUNCTION 'ID_OF_BACKGROUNDTASK'
+  IMPORTING
+    TID = TID."此事务ID与Java端打印出来的是一样的
+WRITE:/ 'TID = ',TID.
+
+COMMIT WORK AND WAIT .
+
+DATA: ERRORTAB TYPE STANDARD TABLE OF ARFCERRORS WITH HEADER LINE.
+
+DO.
+  "获取事务状态，如果事务运行完，则sy-subrc为0
+  CALL FUNCTION 'STATUS_OF_BACKGROUNDTASK'
+    EXPORTING
+      TID           = TID
+    TABLES
+      ERRORTAB      = ERRORTAB[]
+    EXCEPTIONS
+      COMMUNICATION = 1"连接不可用：过会重试
+      RECORDED      = 2"异步RFC调用处于计划中
+      ROLLBACK      = 3."目标系统已经回滚
+  WRITE:/ SY-SUBRC.
+  IF SY-SUBRC = 0.
+    EXIT.
+  ELSE.
+    LOOP AT ERRORTAB.
+      WRITE: / ERRORTAB.
+    ENDLOOP.
+    "如果事务未完成，则等一秒后再判断其状态，直到事务完成
+    WAIT UP TO 1 SECONDS.
+  ENDIF.
+ENDDO.

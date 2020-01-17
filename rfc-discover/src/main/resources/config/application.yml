@@ -1,0 +1,22 @@
+#为什么要用yml文件？而不是xml或properties文件？
+#说明:xml或properties文件都是以标签来配置数据，这样就造成了资源的浪费，不利于我们开发大型项目，而yml(yaml)文件则取消了这样的配置，文件中都是以数据为中心，层级结构以空格作为层级分隔符。使数据得到突出，简化了开发，同时占用的资源也更少。
+
+spring:
+  application:
+    name: eureka-rfc-discovery-feign
+
+server:
+  port: 5001
+
+feign:
+  hystrix:
+    enabled: true
+
+eureka:
+  instance:
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 10
+
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-server-1:8761/eureka/,http://eureka-server-2:8762/eureka/

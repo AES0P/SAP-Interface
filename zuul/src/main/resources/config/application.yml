@@ -1,0 +1,23 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: eureka-gateway
+
+eureka:
+  instance:
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 10
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-server-1:8761/eureka/,http://eureka-server-2:8762/eureka/
+
+zuul:
+  routes:
+    #    api-ribbon:
+    #      path: /ribbon/*
+    #      serviceId: eureka-rfc-discovery-ribbon
+    api-feign:
+      path: /feign/*
+      serviceId: eureka-rfc-discovery-feign

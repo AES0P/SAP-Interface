@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: eureka-server
+
+server:
+  port: 8761
+
+eureka:
+  server:
+    # 这个时间决定了多久会把readWriteCacheMap的缓存更新到readCacheMap上
+    response-cache-update-interval-ms: 3000
+    # 默认60s. 启用主动失效，并且每次主动失效检测间隔为5s.
+    eviction-interval-timer-in-ms: 5000
+    enable-self-preservation: true # 默认为true，设为false，关闭自我保护
+    #Eureka Server 在运行期间会去统计心跳失败比例在 15 分钟之内是否低于 85%
+    renewal-percent-threshold: 0.49 # 默认是0.85，本地单机测试设为0.49
+  instance:
+    # 默认90s. 服务过期时间配置,超过这个时间没有接收到心跳EurekaServer就会将这个实例剔除.
+    # 注意，EurekaServer一定要设置eureka.server.eviction-interval-timer-in-ms否则这个配置无效，这个配置一般为服务刷新时间配置的三倍
+    lease-expiration-duration-in-seconds: 15
+    # 默认30s. 服务刷新时间配置，每隔这个时间会主动心跳一次
+    lease-renewal-interval-in-seconds: 5
+    hostname: eureka-server-1
+    nonSecurePort: ${server.port} #防止端口变成8080
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-server-2:8762/eureka/

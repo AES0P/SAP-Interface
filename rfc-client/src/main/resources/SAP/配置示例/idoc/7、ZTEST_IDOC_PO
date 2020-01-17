@@ -1,0 +1,142 @@
+*&---------------------------------------------------------------------*
+*& Report  ZTEST_IDOC_PO
+*&
+*&---------------------------------------------------------------------*
+*&
+*& 测试从SAP端发送idoc到java端 用
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  ZTEST_IDOC_PO.
+
+TABLES: EKKO.
+
+
+DATA: GT_EKKO TYPE TABLE OF EKKO WITH HEADER LINE,
+      GT_EKPO TYPE TABLE OF EKPO WITH HEADER LINE.
+
+DATA: GW_ZIDOC_EKKO TYPE ZIDOC_EKKO,
+      GW_ZIDOC_EKPO TYPE ZIDOC_EKPO.
+
+
+DATA:WAMAS_CON LIKE EDIDC,
+     IMAS_DATA LIKE EDIDD OCCURS 0 WITH HEADER LINE,
+     ICOM_CON  LIKE EDIDC OCCURS 0 WITH HEADER LINE.
+
+WAMAS_CON-RCVPRT = 'LS'.           "接受方伙伴类型
+WAMAS_CON-RCVPRN = 'JCO_IDOC'.     "接受方伙伴编号
+WAMAS_CON-IDOCTP = 'ZIDOC_PO'.   "基本类型
+WAMAS_CON-MESTYP = 'ZIDOC_PO'.   "消息类型
+
+*&---------------------------------------------------------------------*
+*& Selection Screen/选择屏幕
+*&---------------------------------------------------------------------*
+*&---选择屏幕块
+SELECTION-SCREEN BEGIN OF BLOCK BLK01.
+*&---范围
+SELECT-OPTIONS: S_EBELN FOR EKKO-EBELN.
+*&---空行
+SELECTION-SCREEN SKIP.
+SELECTION-SCREEN END OF BLOCK BLK01.
+
+
+START-OF-SELECTION.
+
+  IF S_EBELN[] IS INITIAL.
+    MESSAGE 'Fill your selection condition!' TYPE 'S' DISPLAY LIKE 'E'.
+  ELSE.
+    PERFORM FRM_GET_DATA.
+    IF GT_EKKO[] IS INITIAL.
+      MESSAGE 'No data found!' TYPE 'S' DISPLAY LIKE 'E'.
+    ELSE.
+      PERFORM FRM_BUILD_TABLE.
+      PERFORM FRM_SEND_IDOC.
+    ENDIF.
+  ENDIF.
+
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM FRM_GET_DATA .
+
+  SELECT * FROM EKKO INTO TABLE GT_EKKO WHERE EBELN IN S_EBELN.
+  SELECT * FROM EKPO INTO TABLE GT_EKPO FOR ALL ENTRIES IN GT_EKKO WHERE EBELN = GT_EKKO-EBELN.
+
+ENDFORM.                    " FRM_GET_DATA
+*&---------------------------------------------------------------------*
+*&      Form  FRM_BUILD_TABLE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM FRM_BUILD_TABLE .
+
+  CLEAR: GW_ZIDOC_EKKO,GW_ZIDOC_EKPO.
+  LOOP AT GT_EKKO.
+
+    IMAS_DATA-SEGNAM = 'ZIDOC_EKKO'.
+
+    MOVE-CORRESPONDING GT_EKKO TO  GW_ZIDOC_EKKO.
+
+    MOVE GW_ZIDOC_EKKO TO IMAS_DATA-SDATA.
+    APPEND IMAS_DATA.
+
+
+    LOOP AT GT_EKPO WHERE EBELN = GT_EKKO-EBELN.
+
+      IMAS_DATA-SEGNAM = 'ZIDOC_EKPO'.
+
+      MOVE-CORRESPONDING GT_EKPO TO  GW_ZIDOC_EKPO.
+
+      MOVE GW_ZIDOC_EKPO TO IMAS_DATA-SDATA.
+      APPEND IMAS_DATA.
+
+      CLEAR: GT_EKPO.
+    ENDLOOP.
+
+    CLEAR: GT_EKKO.
+
+  ENDLOOP.
+
+ENDFORM.                    " FRM_BUILD_TABLE
+*&---------------------------------------------------------------------*
+*&      Form  FRM_SEND_IDOC
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM FRM_SEND_IDOC .
+
+  CALL FUNCTION 'MASTER_IDOC_DISTRIBUTE'
+    EXPORTING
+      MASTER_IDOC_CONTROL            = WAMAS_CON
+    TABLES
+      COMMUNICATION_IDOC_CONTROL     = ICOM_CON
+      MASTER_IDOC_DATA               = IMAS_DATA
+    EXCEPTIONS
+      ERROR_IN_IDOC_CONTROL          = 1
+      ERROR_WRITING_IDOC_STATUS      = 2
+      ERROR_IN_IDOC_DATA             = 3
+      SENDING_LOGICAL_SYSTEM_UNKNOWN = 4
+      OTHERS                         = 5.
+
+  COMMIT WORK.
+
+  READ TABLE ICOM_CON INDEX 1.
+  IF SY-SUBRC NE 0 OR ( ICOM_CON-STATUS NE '03' AND ICOM_CON-STATUS NE '30' ).
+    MESSAGE '' & 'Data send failed.' TYPE 'S' DISPLAY LIKE 'E'.
+  ELSE.
+
+    MESSAGE '' & 'Data sent successfully.' TYPE 'S' .
+  ENDIF.
+
+ENDFORM.                    " FRM_SEND_IDOC

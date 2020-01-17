@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aesop.demo.rfcclient.app.mapper.idoc.PoHeaderMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.aesop.demo.rfcclient.app.bean.idoc.entity.po.PoHeader">
+    <result column="id" property="id" />
+        <result column="ebeln" property="ebeln" />
+        <result column="bukrs" property="bukrs" />
+        <result column="bstyp" property="bstyp" />
+        <result column="loekz" property="loekz" />
+        <result column="aedat" property="aedat" />
+        <result column="ernam" property="ernam" />
+    </resultMap>
+
+</mapper>

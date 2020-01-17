@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aesop.demo.rfcclient.app.mapper.idoc.PoLinesMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.aesop.demo.rfcclient.app.bean.idoc.entity.po.PoLines">
+    <result column="id" property="id" />
+        <result column="ebeln" property="ebeln" />
+        <result column="ebelp" property="ebelp" />
+        <result column="loekz" property="loekz" />
+        <result column="aedat" property="aedat" />
+        <result column="txz01" property="txz01" />
+        <result column="bukrs" property="bukrs" />
+        <result column="werks" property="werks" />
+        <result column="lgort" property="lgort" />
+        <result column="menge" property="menge" />
+        <result column="meins" property="meins" />
+        <result column="bprme" property="bprme" />
+        <result column="bpumz" property="bpumz" />
+    </resultMap>
+
+</mapper>
